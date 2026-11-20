@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -83,7 +84,7 @@
     .s-total .l small { display: block; font-size: 9px; font-weight: 400; letter-spacing: 0; }
     .s-total .r { flex: 1; text-align: center; font-size: 14px; font-weight: 700; }
     table.items { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    table.items th, table.items td { border: 1px solid #000; border-top: 0; padding: 0 1.5mm; height: 7.3mm; font-size: 10.5px; overflow: hidden; }
+    table.items th, table.items td { border: 1px solid #000; border-top: 0; padding: 0 1.5mm; height: 8mm; font-size: 14px; overflow: hidden; }
     table.items th:first-child, table.items td:first-child { border-left: 0; }
     table.items th:last-child, table.items td:last-child { border-right: 0; }
     table.items th { font-weight: 400; background: #e6e6e6; text-align: center; letter-spacing: 2px; height: 7mm; }
@@ -402,7 +403,7 @@
     function savePNG() {
       if (typeof html2canvas !== "function") { showBanner("PNG 저장 기능을 불러오지 못했습니다. 인터넷 연결을 확인해주세요."); return; }
       html2canvas($("sheet"), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
-        canvas.toBlob(blob => {
+        const marginTop=96,marginX=72,marginBottom=48;const output=document.createElement("canvas");output.width=canvas.width+marginX*2;output.height=canvas.height+marginTop+marginBottom;const ctx=output.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,output.width,output.height);ctx.drawImage(canvas,marginX,marginTop);output.toBlob(blob => {
           const a = document.createElement("a");
           a.href = URL.createObjectURL(blob);
           a.download = `견적서_${(state.clientName || "견적").replace(/[\\/:*?"<>|]/g, "")}_${state.quoteDate || todayISO()}.png`;

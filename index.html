@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>견적서 작성기</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1e2430;
+      --muted: #667085;
+      --border: #e4e7ec;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-soft: #eff6ff;
+      --green: #059669;
+      --green-soft: #ecfdf5;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 16px 64px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    h1 { font-size: 1.35rem; margin: 0; }
+    .subtitle { font-size: 0.84rem; color: var(--muted); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    button {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #f1f3f9; }
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    button.primary:hover { background: var(--primary-hover); }
+    button.danger { color: var(--red); }
+
+    .banner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid #a7f3d0;
+    }
+    .banner.show { display: block; }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .panel-title { font-size: 0.95rem; font-weight: 700; margin: 0 0 12px; }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+    }
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: #fff;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.88rem;
+      vertical-align: middle;
+    }
+    th {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: #f9fafb;
+    }
+    .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .summary-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .sum-item {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .sum-label { font-size: 0.78rem; color: var(--muted); }
+    .sum-val { font-size: 1.25rem; font-weight: 800; margin-top: 2px; }
+    .sum-val.total { color: var(--primary); }
+
+    @media print {
+      .toolbar, .no-print, button { display: none !important; }
+      body { background: #fff; }
+      .panel { border: 1px solid #d0d5dd; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>견적서 작성기</h1>
+        <div class="subtitle">항목·단가·수량·부가세 자동 계산 · 내 브라우저 저장(localStorage)</div>
+      </div>
+      <div class="toolbar">
+        <button type="button" onclick="exportJSON()">JSON 백업</button>
+        <button type="button" onclick="document.getElementById('importFile').click()">JSON 복원</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)" />
+        <button type="button" onclick="window.print()">인쇄 / PDF 저장</button>
+      </div>
+    </header>
+
+    <div id="banner" class="banner"></div>
+
+    <section class="panel">
+      <div class="panel-title">견적 기본 정보</div>
+      <div class="meta-grid">
+        <div class="field">
+          <label>견적 제목 / 프로젝트명</label>
+          <input type="text" id="quoteTitle" placeholder="예: 홈페이지 리뉴얼 견적" oninput="saveAndRender()" />
+        </div>
+        <div class="field">
+          <label>수신 (거래처 / 고객명)</label>
+          <input type="text" id="clientName" placeholder="예: OO컴퍼니" oninput="saveAndRender()" />
+        </div>
+        <div class="field">
+          <label>발신 (작성자 / 상호)</label>
+          <input type="text" id="senderName" placeholder="예: 내 상호 / 이름" oninput="saveAndRender()" />
+        </div>
+        <div class="field">
+          <label>견적일자</label>
+          <input type="date" id="quoteDate" onchange="saveAndRender()" />
+        </div>
+        <div class="field">
+          <label>부가세 적용</label>
+          <select id="vatMode" onchange="saveAndRender()">
+            <option value="add">공급가액 + 부가세 10% 별도</option>
+            <option value="none">부가세 없음 (면세/비과세)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">견적 항목</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36%;">품목 / 작업 내용</th>
+              <th style="width:14%;">단위</th>
+              <th style="width:14%; text-align:right;">수량</th>
+              <th style="width:18%; text-align:right;">단가 (원)</th>
+              <th style="width:18%; text-align:right;">금액 (원)</th>
+              <th class="no-print" style="width:8%;"></th>
+            </tr>
+          </thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+      </div>
+
+      <div class="no-print" style="margin-top:10px;">
+        <button type="button" class="primary" onclick="addRow()">+ 항목 추가</button>
+      </div>
+
+      <div class="summary-box">
+        <div class="sum-item">
+          <div class="sum-label">공급가액 합계</div>
+          <div class="sum-val" id="subtotalDisplay">0원</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-label">부가세 (VAT)</div>
+          <div class="sum-val" id="vatDisplay">0원</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-label">최종 견적 금액</div>
+          <div class="sum-val total" id="totalDisplay">0원</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">비고 / 결제 및 유효기간 안내</div>
+      <textarea id="noteText" placeholder="예: 견적 유효기간은 발행일로부터 14일입니다. 계약금 50%, 잔금 완료 시 지급." oninput="saveAndRender()"></textarea>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "my_quote_builder_v1";
+
+    function todayISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    let state = {
+      quoteTitle: "",
+      clientName: "",
+      senderName: "",
+      quoteDate: todayISO(),
+      vatMode: "add",
+      noteText: "",
+      rows: [
+        { name: "기본 작업 항목", unit: "식", qty: 1, price: 100000 }
+      ]
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      if (saved && typeof saved === "object") {
+        state = {
+          ...state,
+          ...saved,
+          rows: Array.isArray(saved.rows) && saved.rows.length ? saved.rows : state.rows
+        };
+      }
+    } catch {}
+
+    function showBanner(msg) {
+      const el = document.getElementById("banner");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 3000);
+    }
+
+    function syncInputsFromState() {
+      document.getElementById("quoteTitle").value = state.quoteTitle || "";
+      document.getElementById("clientName").value = state.clientName || "";
+      document.getElementById("senderName").value = state.senderName || "";
+      document.getElementById("quoteDate").value = state.quoteDate || todayISO();
+      document.getElementById("vatMode").value = state.vatMode || "add";
+      document.getElementById("noteText").value = state.noteText || "";
+    }
+
+    function addRow() {
+      state.rows.push({ name: "", unit: "개", qty: 1, price: 0 });
+      saveAndRender(true);
+    }
+
+    function removeRow(idx) {
+      if (state.rows.length <= 1) {
+        state.rows = [{ name: "", unit: "개", qty: 1, price: 0 }];
+      } else {
+        state.rows.splice(idx, 1);
+      }
+      saveAndRender(true);
+    }
+
+    function updateRow(idx, key, val) {
+      if (!state.rows[idx]) return;
+      if (key === "qty" || key === "price") {
+        state.rows[idx][key] = Number(val) || 0;
+      } else {
+        state.rows[idx][key] = val;
+      }
+      saveAndRender(false);
+    }
+
+    function saveAndRender(rebuildRows = false) {
+      state.quoteTitle = document.getElementById("quoteTitle").value;
+      state.clientName = document.getElementById("clientName").value;
+      state.senderName = document.getElementById("senderName").value;
+      state.quoteDate = document.getElementById("quoteDate").value;
+      state.vatMode = document.getElementById("vatMode").value;
+      state.noteText = document.getElementById("noteText").value;
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {}
+
+      if (rebuildRows) renderRows();
+      updateTotals();
+    }
+
+    function renderRows() {
+      const tbody = document.getElementById("itemRows");
+      tbody.innerHTML = state.rows.map((r, i) => {
+        const lineSum = (Number(r.qty) || 0) * (Number(r.price) || 0);
+        return `
+          <tr>
+            <td><input type="text" value="${escapeAttr(r.name)}" placeholder="품목명 입력" oninput="updateRow(${i}, 'name', this.value)" /></td>
+            <td><input type="text" value="${escapeAttr(r.unit)}" placeholder="식/개/시간" oninput="updateRow(${i}, 'unit', this.value)" /></td>
+            <td><input type="number" min="0" step="1" value="${Number(r.qty) || 0}" style="text-align:right;" oninput="updateRow(${i}, 'qty', this.value); updateTotals();" /></td>
+            <td><input type="number" min="0" step="1000" value="${Number(r.price) || 0}" style="text-align:right;" oninput="updateRow(${i}, 'price', this.value); updateTotals();" /></td>
+            <td class="num" id="lineTotal-${i}">${lineSum.toLocaleString()}원</td>
+            <td class="no-print"><button type="button" class="danger" onclick="removeRow(${i})">삭제</button></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function updateTotals() {
+      let subtotal = 0;
+      state.rows.forEach((r, i) => {
+        const lineSum = (Number(r.qty) || 0) * (Number(r.price) || 0);
+        subtotal += lineSum;
+        const cell = document.getElementById(`lineTotal-${i}`);
+        if (cell) cell.textContent = `${lineSum.toLocaleString()}원`;
+      });
+      const vat = state.vatMode === "add" ? Math.round(subtotal * 0.1) : 0;
+      const total = subtotal + vat;
+
+      document.getElementById("subtotalDisplay").textContent = `${subtotal.toLocaleString()}원`;
+      document.getElementById("vatDisplay").textContent = `${vat.toLocaleString()}원`;
+      document.getElementById("totalDisplay").textContent = `${total.toLocaleString()}원`;
+    }
+
+    function escapeAttr(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function exportJSON() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `견적서백업_${todayISO()}.json`;
+      a.click();
+      showBanner("JSON 백업 파일을 내려받았습니다.");
+    }
+
+    function importJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!parsed || !Array.isArray(parsed.rows)) throw new Error();
+          state = { ...state, ...parsed };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          syncInputsFromState();
+          renderRows();
+          updateTotals();
+          showBanner("견적서 데이터를 복원했습니다.");
+        } catch {
+          showBanner("올바른 견적서 JSON 파일이 아닙니다.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    syncInputsFromState();
+    renderRows();
+    updateTotals();
+  </script>
+
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+  </script>
+</body>
+</html>

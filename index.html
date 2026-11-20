@@ -141,7 +141,7 @@
     </section>
 
     <section class="panel no-print">
-      <div class="panel-title">공급자 정보</div>
+      <div class="supplier-heading"><div class="panel-title">공급자 정보</div><button type="button" class="primary" id="supplierToggle" onclick="toggleSupplierForm()">정보 입력</button></div>      <div id="supplierSummary" class="supplier-summary" hidden></div>
       <div class="panel-hint">한 번 입력하면 저장되어 다음 견적서에도 그대로 사용됩니다.</div>
       <div class="meta-grid">
         <div class="field"><label>등록번호 (사업자등록번호)</label><input type="text" data-k="bizNo" placeholder="000-00-00000" /></div>
@@ -242,7 +242,7 @@
       setTimeout(() => el.classList.remove("show"), 3000);
     }
 
-    function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} }
+    function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} }    function hasSupplierInfo() {      return ["bizNo","compName","ceoName","addr","bizType","bizItem","tel"].some(k => String(state[k] || "").trim()) || !!state.stamp;    }    let supplierEditing = !hasSupplierInfo();    function syncSupplierEditor() {      const panel = document.querySelector("[data-k=\"bizNo\"]").closest(".panel");      const form = panel.querySelector(".meta-grid");      const summary = panel.querySelector("#supplierSummary");      const toggle = panel.querySelector("#supplierToggle");      const hasInfo = hasSupplierInfo();      form.style.display = supplierEditing ? "grid" : "none";      toggle.textContent = supplierEditing ? "입력 완료" : (hasInfo ? "정보 수정" : "정보 입력");      summary.hidden = supplierEditing || !hasInfo;      summary.textContent = [state.compName, state.bizNo, state.ceoName, state.tel].filter(Boolean).join(" · ");    }    function toggleSupplierForm() {      supplierEditing = !supplierEditing;      save();      syncSupplierEditor();      if (!supplierEditing) showBanner("공급자 정보가 저장되었습니다.");    }
 
     // 한글 금액 (예: 110000 -> 일십일만)
     function toKorean(n) {
@@ -431,14 +431,14 @@
           if (!p || !Array.isArray(p.rows)) throw new Error();
           state = { ...state, ...p, rows: normalizeRows(p.rows) };
           if (!state.compName && p.senderName) state.compName = p.senderName;
-          save(); syncInputs(); renderRows(); update();
+          save(); syncInputs(); syncSupplierEditor(); renderRows(); update();
           showBanner("견적서 데이터를 복원했습니다.");
         } catch { showBanner("올바른 견적서 JSON 파일이 아닙니다."); }
       };
       reader.readAsText(file); e.target.value = "";
     }
 
-    syncInputs(); renderRows(); update();
+    syncInputs(); syncSupplierEditor(); renderRows(); update();
   </script>
 
   <script>
